@@ -1,0 +1,514 @@
+---
+title: "Unsupervised Learning"
+author: "Waiyego Mburu"
+date: "10/07/2021"
+output: html_document
+---
+# DEFINING THE QUESTION
+
+## Specifying The Objective
+
+Learning the characteristics of customer groups by: - Performing clustering stating insights drawn from your analysis and visualizations. - Upon implementation, provide comparisons between the approaches learned this week i.e. K-Means clustering vs Hierarchical clustering highlighting the strengths and limitations of each approach in the context of your analysis.
+
+## Metric For Success
+
+Being able to differentiate the different algorithms and determine which one works better for this problem.
+
+## CONTEXT
+
+“Kira Plastinina” is a Russian brand that is sold through a defunct chain of retail stores in Russia, Ukraine, Kazakhstan, Belarus, China, Philippines, and Armenia. The brand’s Sales and Marketing team would like to understand their customer’s behavior from data that they have collected over the past year. More specifically, they would like to learn the characteristics of customer groups.
+
+## Experimental Design Taken
+
+1. Loading Data into RStudio.
+2. Checking the Data and Cleaning it.
+3. Conducting Exploratory Data Analysis.
+4. Implementing the Solution.
+5. Recommendations.
+
+## Appropriateness Of The Data
+
+The data was relevant and appropriate since it did not have many outliers or missing data. Furthermore, the activities were linked to internet activity, considering the course would be online.
+
+## READING THE DATASET
+
+```{r}
+# importing the data
+dataset <-read.csv("http://bit.ly/EcommerceCustomersDataset")
+
+```
+
+##### Checking the first 6 entries
+
+```{r}
+head(dataset)
+```
+
+##### Checking the last 6 entries
+
+```{r}
+tail(dataset)
+```
+
+##### Checking the shape of our dataset
+
+```{r}
+dim(dataset)
+```
+
+##### Checking for duplicates and unique values
+
+```{r}
+duplicates <- dataset[duplicated(dataset),]
+duplicates
+```
+
+#### Dropping the duplicates
+
+```{r}
+df <- dataset[!duplicated(dataset),]
+head(df)
+```
+
+##### Getting information on our datatypes
+
+```{r}
+str(df)
+```
+
+## Checking for null values per column
+
+```{r}
+colSums(is.na(df))
+```
+
+Before we can do anything about the missing values, we have to first confirm that we have more than sufficient records. A rule of thumb is to ensure that there are at least 5 records per variables (at least 5 rows for each column). We have 18 columns, so 18 times 5 is 900. Since we have way more than 900 records, it is safe and efficient to just drop these records with missing values.
+
+### Dropping The null values
+
+```{r}
+df= na.omit(df)
+head(df)
+```
+
+## Checking for outliers in our numerical variables
+
+```{r}
+Administrative <- df$Administrative
+Administrative_Duration <- df$Administrative_Duration
+Informational <- df$Informational
+Informational_Duration <- df$Informational_Duration
+ProductRelated <- df$ProductRelated
+ProductRelated_Duration <- df$ProductRelated_Duration
+BounceRates <- df$BounceRates
+ExitRates <- df$ExitRates
+PageValues <- df$PageValues
+SpecialDay <- df$SpecialDay
+Month <- df$Month
+OperatingSystems <- df$OperatingSystems
+Browser <- df$Browser
+Region <- df$Region
+TrafficType <- df$TrafficType
+VisitorType <- df$VisitorType
+Weekend <- df$Weekend
+Revenue <- df$Revenue
+```
+
+```{r}
+par(mfrow = c(2,2), mar = c(5,4,2,2))
+
+# Finding all columns that are numerical/not strings & sub-setting to new data frame
+df_num <- df[, !sapply(df, is.character)]
+df_num1 <- subset(df_num,select = c(1,3))
+boxplot(df_num1, main='BoxPlots')
+df_num2 <- subset(df_num,select = c(7,8,10))
+boxplot(df_num2, main='BoxPlots')
+df_num3 <- subset(df_num,select = c(2,5,9))
+boxplot(df_num3, main='BoxPlots')
+boxplot(ProductRelated_Duration)
+```
+
+The outliers will not be removed because they represent the real world, and can provide some insights as to why they occurred.
+
+## EXploratory Data Analysis
+
+### Univariate Analysis
+
+#### Categorical variables
+```{r}
+categorical_columns = df[(c(11:18))]
+head(categorical_columns)
+```
+
+```{r}
+par(mfrow=c(1, 2))
+
+Revenue.distribution <- table(Revenue)
+label <- c("False","True")
+barplot(Revenue.distribution,names.arg = label,main = "Revenue Distribution")
+
+Weekend.distribution <- table(Weekend)
+label <- c("False","True")
+barplot(Weekend.distribution,names.arg = label,main = "Weekend Distribution")
+
+TrafficType.distribution <- table(TrafficType)
+barplot(TrafficType.distribution,main = "Traffic Type Distribution")
+
+VisitorType.distribution <- table(VisitorType)
+label <- c("New","Other","Returning")
+barplot(VisitorType.distribution,names.arg = label,main = "Visitor Type Distribution")
+
+Region.distribution <- table(Region)
+barplot(Region.distribution,main = "Region Distribution")
+
+Browser.distribution <- table(Browser)
+barplot(Browser.distribution,main = "Browser Distribution")
+
+OperatingSystems.distribution <- table(OperatingSystems)
+barplot(OperatingSystems.distribution,main = "Operating Systems Distribution")
+
+Month.distribution <- table(Month)
+barplot(Month.distribution,main = "Month Distribution")
+```
+
+#### Numerical Variables
+```{r}
+numerical_columns = df[(c(1:10))]
+head(numerical_columns)
+```
+
+##### Histogram plots
+
+```{r}
+
+par(mfrow=c(1, 2))
+
+
+for (i in 1:10) {
+  hist(numerical_columns[, i], main = names(numerical_columns)[i], xlab = names(numerical_columns)[i])
+}
+```
+
+```{r}
+colnames(df)
+```
+
+
+##### Measures of central Tendencies (mean ,median,mode)
+
+#### **Mean**
+
+```{r}
+library(dplyr)
+```
+
+```{r}
+numerical_columns%>% summarise_if(is.numeric, mean)
+```
+
+```{r}
+numerical_columns%>% summarise_if(is.numeric, median)
+```
+
+```{r}
+getmode = function(v){
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]  
+}
+```
+
+```{r}
+numerical_columns%>% summarise_if(is.numeric,getmode)
+```
+
+```{r}
+getmode(Month)
+```
+
+```{r}
+getmode(Weekend)
+```
+```{r}
+getmode(Revenue)
+```
+
+```{r}
+library(psych)
+```
+
+```{R}
+describe(numerical_columns)
+```
+
+All our numerical columns are positively skewed and are Leptokurtic. This shows that our data is not normally distributed hence we need to normalize during creation of our models.
+
+### Bivariate Analysis
+```{r}
+library(ggplot2)
+```
+
+```{r}
+# Administrative by Revenue
+ggplot(df, aes(x = Administrative, fill = Revenue, color = Revenue)) +
+geom_freqpoly(binwidth = 1) +
+labs(title = "Administrative by Revenue")
+```
+```{r}
+ggplot(df, aes(x = Administrative_Duration, fill = Revenue, color = Revenue)) +
+geom_histogram(binwidth = 1) +
+labs(title = "Administrative Duration by Revenue")
+```
+```{r}
+ggplot(df, aes(x = Informational, fill = Revenue, color = Revenue)) +
+geom_freqpoly(binwidth = 1) +
+labs(title = "Informational by Revenue")
+```
+
+```{r}
+ggplot(df, aes(x = Informational, fill = Revenue, color = Revenue)) +
+geom_freqpoly(binwidth = 1) +
+labs(title = "Informational by Revenue")
+```
+```{r}
+ggplot(df, aes(x = Informational_Duration, fill = Revenue, color = Revenue)) +
+geom_histogram(binwidth = 1) +
+labs(title = "Informational Duration by Revenue")
+```
+```{r}
+ggplot(df, aes(x = ProductRelated, fill = Revenue, color = Revenue)) +
+geom_histogram(binwidth = 1) +
+labs(title = "Product Related by Revenue")
+```
+
+```{r}
+ggplot(df, aes(x = ProductRelated_Duration, fill = Revenue, color = Revenue)) +
+geom_histogram(binwidth = 1) +
+labs(title = "Product Related Duration by Revenue")
+```
+```{R}
+library(ggplot2)
+```
+
+```{r}
+ggplot(df, aes(x = BounceRates, fill = Revenue, color = Revenue)) +
+geom_freqpoly(binwidth = 1) +
+labs(title = "Bounce Rates by Revenue")
+```
+
+```{r}
+ggplot(df, aes(x = ExitRates, fill = Revenue, color = Revenue)) +
+geom_freqpoly(binwidth = 1) +
+labs(title = "Exit Rates by Revenue")
+```
+
+```{r}
+ggplot(df, aes(x = PageValues, fill = Revenue, color = Revenue)) +
+geom_histogram(binwidth = 1) +
+labs(title = "Page Values by Revenue")
+```
+
+```{r}
+ggplot(df, aes(x = SpecialDay, fill = Revenue, color = Revenue)) +
+geom_freqpoly(binwidth = 1) +
+labs(title = "Special Day by Revenue")
+```
+
+```{r}
+rev_month <- table(Revenue,Month)
+barplot(rev_month, main = "Revenue per Month", col = c("coral", "blue"), beside = TRUE, 
+        legend = rownames(rev_month), xlab = "Month")
+```
+
+November returns the highest number of revenues while February returns the lowest.
+
+```{r}
+rev_os <- table(Revenue,OperatingSystems)
+barplot(rev_os, main = "Revenue per Operating System", col = c("pink", "cyan"), beside = TRUE, 
+        legend = rownames(rev_os), xlab = "Operating System")
+```
+
+Operating System 2 returns the highest number of revenue while OS 5, 6, and 7 return the lowest.
+
+```{r}
+rev_browser <- table(Revenue,Browser)
+barplot(rev_browser, main = "Revenue per Browser", col = c("pink", "cyan"), beside = TRUE, 
+        legend = rownames(rev_browser), xlab = "Browser")
+```
+
+Browser 2 returns the highest number of revenue while 3, 7, 9, 11, and 12 return the lowest.
+
+```{r}
+rev_region <- table(Revenue,Region)
+barplot(rev_region, main = "Revenue per Region", col = c("pink", "cyan"), beside = TRUE, 
+        legend = rownames(rev_region), xlab = "Region")
+```
+
+Region 1 returns the highest number of revenue, Region 5 returns the lowest.
+
+```{r}
+rev_traffic <- table(Revenue,TrafficType)
+barplot(rev_traffic, main = "Revenue per Traffic Type", col = c("pink", "cyan"), beside = TRUE, 
+        legend = rownames(rev_traffic), xlab = "Traffic Type")
+```
+
+Traffic 2 has the highest number of revenues, 12, 14, 16, 17, and 18 return the lowest.
+
+```{r}
+rev_visitor <- table(Revenue,VisitorType)
+barplot(rev_visitor, main = "Revenue per Visitor Type", col = c("pink", "cyan"), beside = TRUE, 
+        legend = rownames(rev_visitor), xlab = "Visitor Type")
+```
+
+Returning visitors generated more revenue.
+
+```{r}
+rev_weekend <- table(Revenue, Weekend)
+barplot(rev_weekend, main = "Revenue per Weekend", col = c("pink", "cyan"), beside = TRUE, 
+        legend = rownames(rev_weekend), xlab = "Weekend")
+```
+
+As expected, more revenue was generated during the weekdays than the weekends. This is to be expected since there are way more records of weekdays than of weekends.
+
+Now to find the correlations between the numerical variables.
+```{r}
+# using a heat map to visualize variable correlations
+library(corrplot)
+```
+
+```{R}
+corr_df <- cor(numerical_columns,method = "pearson")
+```
+
+```{R}
+corrplot(corr_df, type = "lower", order = "hclust", tl.col = "red", tl.srt = 50)
+```
+
+As suspected, BounceRates is very highly correlated to ExitRates, Administrative is correlated with Administrative_Duration, Informational is highly correlated to Informational_Duration, and ProductRelated is highly correlated with ProductRated_Duration. Therefore, we will have to drop one variable of each of the highly correlated pairs to reduce dimensionality and redundancy.
+
+```{r}
+# dropping the highly correlated columns
+to_drop <- c("Administrative_Duration", "Informational_Duration", "ProductRelated_Duration", "ExitRates")
+
+df <- df[, !names(df) %in% to_drop]
+head(df)
+```
+
+```{r}
+new_corr_df <- cor(df[1:6])
+corrplot(new_corr_df, type = "lower", order = "hclust", tl.col = "red", tl.srt = 50)
+```
+
+
+As we can see, removing the highly correlated variables reduced multicollinearity in our dataset. It also made it easier to work with. We can now move on to modelling.
+
+# IMPLEMENTING THE SOLUTION
+
+```{R}
+library(CatEncoders)
+```
+
+```{r}
+df$Weekend <- as.character(df$Weekend)
+df$Revenue <- as.character(df$Revenue)
+```
+
+```{R}
+# Label encode the categorical columns
+for (i in c(7,12,13,14)) {
+  
+  encode = LabelEncoder.fit(df[,i])
+  df[,i] = transform(encode, df[,i])
+}
+```
+```{R}
+head(df)
+```
+
+```{r}
+#Create a data frame without the target variable
+df.new <- df[(c(1:14))]
+df.new
+```
+
+### K-MEANS CLUSTERING
+#### **normalizing the data**
+```{R}
+normalize <- function(x){
+  return ((x-min(x)) / (max(x)-min(x)))
+}
+
+df_normal <- normalize (df.new)
+```
+
+```{r}
+# This step was added because finding the optimum number of clusters took sometime. therefore taking a random sample of 1000 
+random_df <- df_normal[sample(nrow(df_normal), size=1000), ]
+head(random_df)
+```
+
+```{r}
+# Loading the required libraries
+library(factoextra)
+library(NbClust)
+library (cluster)
+```
+
+```{r}
+# Elbow method
+fviz_nbclust(random_df, kmeans, method = "wss") +
+    geom_vline(xintercept = 3, linetype = 2)+
+  labs(subtitle = "Elbow method")
+```
+
+```{r}
+# Silhouette method
+fviz_nbclust(random_df, kmeans, method = "silhouette")+
+  labs(subtitle = "Silhouette method")
+```
+
+```{r}
+# Gap statistic
+# nboot = 500 to keep the function speedy. 
+
+set.seed(123)
+fviz_nbclust(random_df, kmeans, nstart = 25,  method = "gap_stat", nboot = 500)+
+  labs(subtitle = "Gap statistic method")
+```
+
+```{r}
+# choosing the best number of clusters
+nb<-NbClust(data = random_df, distance = "euclidean",
+        min.nc = 2, max.nc = 15, method = "kmeans")
+
+fviz_nbclust(nb)
+```
+
+```{r}
+
+clustering <- kmeans(df_normal,3,iter.max = 10, nstart = 25)
+clustering
+```
+
+```{r}
+#plot results of final k-means model
+fviz_cluster(clustering, data = df.new)
+```
+
+### HIERACHICAL CLUSTERING
+
+```{r}
+dy <- dist(random_df, method = "manhattan")
+res.h <- hclust(dy, method = "ward.D2")
+plot(res.h, cex=0.6, hang=-1)
+rect.hclust(res.h , k = 10, border = 2:6)
+abline(h = 40, col = 'green')
+```
+
+```{r}
+suppressPackageStartupMessages(library(dendextend))
+avg_dend_obj <- as.dendrogram(res.h)
+avg_col_dend <- color_branches(avg_dend_obj, h = 50)
+```
+
+# Conclusion
+ K-means clustering was able to cluster the customers into two clusters with one cluster being much bigger than the other which reflects the distribution of the revenues where we had the false being significantly more than the true. Hierarchical clustering does the job as well only with more clusters which can be a bit confusing if you don't understand which cluster represents what.
